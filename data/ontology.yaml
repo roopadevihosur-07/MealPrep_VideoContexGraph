@@ -1,0 +1,152 @@
+inherits: _base
+
+domain:
+  id: video-context-graph
+  name: Video Context Graph
+  description: Video understanding as a knowledge graph — TwelveLabs extracts what is shown, said, and written per segment; Neo4j merges the same entities across many videos.
+  tagline: "Video is evidence"
+  emoji: "\U0001F3AC"  # 🎬
+
+# The same entity/topic seen across independent videos MERGEs to one node
+# (keyed by normalized name), so the graph grows richer instead of duplicating.
+entity_types:
+  - label: Video
+    pole_type: OBJECT
+    subtype: VIDEO
+    color: "#8b5cf6"
+    icon: film
+    properties:
+      - name: id                # TwelveLabs video_id
+        type: string
+        required: true
+        unique: true
+      - name: title
+        type: string
+        required: true
+      - name: url
+        type: string
+      - name: duration_sec
+        type: float
+      - name: summary
+        type: string
+      - name: tl_index_id
+        type: string
+
+  - label: Segment
+    pole_type: EVENT
+    subtype: VIDEO_SEGMENT
+    color: "#0ea5e9"
+    icon: scissors
+    properties:
+      - name: id                # <video_id>#<index>
+        type: string
+        required: true
+        unique: true
+      - name: video_id
+        type: string
+        required: true
+      - name: start_sec
+        type: float
+      - name: end_sec
+        type: float
+      - name: summary
+        type: string
+      - name: on_screen_text
+        type: string
+      - name: transcript
+        type: string
+      - name: embedding          # Marengo vector -> vector index
+        type: vector
+
+  - label: Entity
+    pole_type: OBJECT
+    subtype: EXTRACTED_ENTITY
+    color: "#f59e0b"
+    icon: tag
+    properties:
+      - name: key                # normalized name (merge key)
+        type: string
+        required: true
+        unique: true
+      - name: name
+        type: string
+        required: true
+      - name: type
+        type: string
+        enum: [person, organization, location, object, product, brand, event, concept]
+
+  - label: Topic
+    pole_type: OBJECT
+    subtype: TOPIC
+    color: "#10b981"
+    icon: hash
+    properties:
+      - name: key
+        type: string
+        required: true
+        unique: true
+      - name: name
+        type: string
+        required: true
+
+relationships:
+  - type: HAS_SEGMENT
+    source: Video
+    target: Segment
+  - type: NEXT           # temporal order between consecutive segments
+    source: Segment
+    target: Segment
+  - type: MENTIONS       # a segment shows/says an entity
+    source: Segment
+    target: Entity
+  - type: ABOUT          # a segment is about a topic
+    source: Segment
+    target: Topic
+
+demo_scenarios:
+  - name: Explore
+    prompts:
+      - "What videos do we have and what are they about?"
+      - "Show me the graph of everything involving cars"
+      - "Which entities appear in more than one video?"
+
+  - name: Find a moment
+    prompts:
+      - "Find the moment where someone is driving"
+      - "Where does a person appear on screen?"
+      - "Show me segments about the outdoors"
+
+  - name: Cross-video
+    prompts:
+      - "What connects these videos to each other?"
+      - "List the topics that span multiple videos"
+      - "Summarize what happens across all segments of the first video"
+
+system_prompt: |
+  You are a video intelligence assistant. You answer questions over a Neo4j
+  knowledge graph built from videos analyzed by TwelveLabs. The graph contains
+  Video nodes, time-coded Segment nodes, and Entity/Topic nodes that are shared
+  across videos (the same entity in two videos is one node).
+
+  Always ground answers in the graph: use your tools to look up real Videos,
+  Segments, Entities, and Topics before answering. When you reference a moment,
+  cite the video title and the segment's start/end timecodes so the user can
+  jump to it. Prefer graph traversal for "what connects / what involves X"
+  questions and semantic segment search for "find the moment where..." questions.
+
+visualization:
+  node_colors:
+    Video: "#8b5cf6"
+    Segment: "#0ea5e9"
+    Entity: "#f59e0b"
+    Topic: "#10b981"
+    Person: "#22c55e"
+    Organization: "#3b82f6"
+    Location: "#a855f7"
+    Object: "#eab308"
+  node_sizes:
+    Video: 34
+    Segment: 20
+    Entity: 22
+    Topic: 22
+  default_cypher: "MATCH (v:Video)-[r:HAS_SEGMENT]->(s:Segment) RETURN v, r, s LIMIT 100"
