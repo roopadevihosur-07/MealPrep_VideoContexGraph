@@ -1,10 +1,8 @@
 """Application configuration from environment variables.
 
-Thin "Video Agent Context Graph" configuration: self-hosted Neo4j (bolt),
-an OpenAI-brained Strands agent, and TwelveLabs (Marengo + Pegasus) for
-video understanding. The heavyweight neo4j-agent-memory / NAMS layer from the
-generated scaffold has been removed — short-term chat context is kept
-in-process (see app.memory).
+Configuration for the Video Agent Context Graph: Neo4j (bolt) for the graph,
+an OpenAI-brained Strands agent, and TwelveLabs (Marengo + Pegasus) for video
+understanding. Short-term chat context is kept in-process (see app.memory).
 """
 
 from pydantic_settings import BaseSettings

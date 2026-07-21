@@ -168,7 +168,7 @@ def is_connected() -> bool:
 
 
 async def connect_neo4j() -> None:
-    """Connect to Neo4j and initialize the memory integration."""
+    """Connect to Neo4j."""
     global _driver, _connected
     from app.config import settings
     _driver = AsyncGraphDatabase.driver(
@@ -178,17 +178,11 @@ async def connect_neo4j() -> None:
     await _driver.verify_connectivity()
     _connected = True
 
-    # Initialize MemoryIntegration for conversation memory + entity extraction
-    from app.memory import connect_memory
-    await connect_memory()
-
 
 async def close_neo4j() -> None:
-    """Close Neo4j connection and memory integration."""
+    """Close the Neo4j connection."""
     global _driver, _connected
     _connected = False
-    from app.memory import close_memory
-    await close_memory()
     if _driver:
         await _driver.close()
         _driver = None
