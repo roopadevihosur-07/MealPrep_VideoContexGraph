@@ -49,21 +49,21 @@ export const DEMO_SCENARIOS: DemoScenario[] = [
     name: "Explore",
     prompts: [
       "What videos do we have and what are they about?",
-      "Which entities appear in more than one video?",
+      "Show me the graph around the rabbit",
     ],
   },
   {
     name: "Find a moment",
     prompts: [
-      "Find the moment where someone is driving",
-      "Show me segments about the outdoors",
+      "Find the moment where a butterfly lands on the rabbit",
+      "Where does the rabbit eat an apple?",
     ],
   },
   {
     name: "Cross-video",
     prompts: [
-      "What connects these videos to each other?",
-      "List the topics that span multiple videos",
+      "Which entities appear in more than one video?",
+      "What connects the two clips to each other?",
     ],
   },
 ];

@@ -107,20 +107,20 @@ demo_scenarios:
   - name: Explore
     prompts:
       - "What videos do we have and what are they about?"
-      - "Show me the graph of everything involving cars"
-      - "Which entities appear in more than one video?"
+      - "Show me the graph around the rabbit"
+      - "Which entities show up most across the videos?"
 
   - name: Find a moment
     prompts:
-      - "Find the moment where someone is driving"
-      - "Where does a person appear on screen?"
-      - "Show me segments about the outdoors"
+      - "Find the moment where a butterfly lands on the rabbit"
+      - "Where does the rabbit eat an apple?"
+      - "Show me the segment where the rabbit wakes up"
 
   - name: Cross-video
     prompts:
-      - "What connects these videos to each other?"
+      - "Which entities appear in more than one video?"
+      - "What connects the two clips to each other?"
       - "List the topics that span multiple videos"
-      - "Summarize what happens across all segments of the first video"
 
 system_prompt: |
   You are a video intelligence assistant. You answer questions over a Neo4j
