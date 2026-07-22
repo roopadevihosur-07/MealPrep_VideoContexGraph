@@ -1,7 +1,5 @@
 # Video Agent Context Graph
 
-[![Neo4j Labs](https://img.shields.io/badge/Neo4j_Labs-blue?logo=neo4j)](https://neo4j.com/labs/)
-
 **Video is evidence.** Point it at raw video and this app builds a live Neo4j
 knowledge graph of what is *shown, said, and written* — then lets an
 OpenAI-brained agent answer questions over it, with a live graph visualization.
@@ -280,6 +278,6 @@ no representation about third-party clips you choose to ingest.
 
 ---
 
-> Neo4j Labs project — started from
+> started from
 > [create-context-graph](https://github.com/neo4j-labs/create-context-graph),
 > repointed to video. Maintained by the community; not officially supported.
