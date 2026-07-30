@@ -1,4 +1,4 @@
-# Video Agent Context Graph
+# Meal Prep - Video Agent Context Graph
 
 **Video is evidence.** Point it at raw video and this app builds a live Neo4j
 knowledge graph of what is *shown, said, and written* — then lets an
