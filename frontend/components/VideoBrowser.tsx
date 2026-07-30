@@ -103,10 +103,10 @@ export function VideoBrowser() {
         <Box px={3} py={2}>
           <Heading size="sm" mb={2}>{selected.title}</Heading>
           {
-            // Use backend streaming endpoint if URL is not a full HTTP URL
+            // Use direct video URL from database, or construct from filename
             <video
               ref={videoRef}
-              src={selected.url && selected.url.startsWith("http") ? selected.url : `${API_BASE.replace("/api", "")}/video/${encodeURIComponent(selected.id)}/stream`}
+              src={selected.url || `${API_BASE.replace("/api", "")}/videos/${encodeURIComponent(selected.title.replace(/\s+/g, "_"))}.mp4`}
               controls
               style={{ width: "100%", borderRadius: 6 }}
             />

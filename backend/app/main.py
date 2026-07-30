@@ -3,9 +3,11 @@
 import logging
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.context_graph_client import connect_neo4j, close_neo4j, is_connected
@@ -55,6 +57,11 @@ app.add_middleware(
 )
 
 app.include_router(router, prefix="/api")
+
+# Serve video files statically
+videos_path = Path(__file__).parent.parent.parent / "data" / "videos"
+if videos_path.exists():
+    app.mount("/videos", StaticFiles(directory=str(videos_path)), name="videos")
 
 
 @app.get("/health")
