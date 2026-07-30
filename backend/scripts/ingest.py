@@ -135,7 +135,8 @@ async def write_video(video: dict, segments: list[dict]) -> None:
         """
         MERGE (v:Video {id: $id})
         SET v.title = $title, v.url = $url, v.duration_sec = $duration_sec,
-            v.summary = $summary, v.tl_index_id = $tl_index_id, v.domain = $domain
+            v.summary = $summary, v.tl_index_id = $tl_index_id, v.domain = $domain,
+            v.filename = $filename
         """,
         {**video, "domain": domain},
         collect=False,
@@ -218,7 +219,7 @@ async def write_video(video: dict, segments: list[dict]) -> None:
 
 
 async def _analyze_embed_write(index_id: str, video_id: str, url: str | None,
-                               title: str, duration_sec) -> int:
+                               title: str, duration_sec, filename: str | None = None) -> int:
     """Shared tail: Pegasus analyze -> OpenAI structure -> Marengo embed -> Neo4j."""
     log.info("Analyzing video_id=%s with Pegasus ...", video_id)
     pegasus_text = tl.analyze_video(video_id, PEGASUS_PROMPT)
@@ -244,6 +245,7 @@ async def _analyze_embed_write(index_id: str, video_id: str, url: str | None,
         "duration_sec": duration_sec,
         "summary": structured.get("video_summary", ""),
         "tl_index_id": index_id,
+        "filename": filename,
     }
     await write_video(video, segments)
     log.info("Wrote video '%s' (%d segments) to Neo4j", title, len(segments))
@@ -266,6 +268,7 @@ async def ingest_new(index_id: str, source: str) -> int:
         return 0
 
     title = (info.get("filename") or source.rsplit("/", 1)[-1]).rsplit(".", 1)[0]
+    filename = (info.get("filename") or source.rsplit("/", 1)[-1]) if is_file else None
     # A local upload has no public URL for playback — pull the HLS URL from TL.
     url = None if is_file else source
     if is_file:
@@ -273,7 +276,7 @@ async def ingest_new(index_id: str, source: str) -> int:
             url = tl.get_video_meta(index_id, video_id).get("url")
         except Exception:
             pass
-    return await _analyze_embed_write(index_id, video_id, url, title, info.get("duration_sec"))
+    return await _analyze_embed_write(index_id, video_id, url, title, info.get("duration_sec"), filename)
 
 
 async def ingest_existing(index_id: str, video_id: str) -> int:

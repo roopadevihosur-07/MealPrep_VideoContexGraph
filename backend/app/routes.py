@@ -230,6 +230,19 @@ async def stream_video(video_id: str):
     from pathlib import Path
     import os
 
+    _require_neo4j()
+
+    # Query database for the filename
+    results = await execute_cypher(
+        "MATCH (v:Video {id: $vid}) RETURN v.filename AS filename",
+        {"vid": video_id},
+        collect=True,
+    )
+
+    filename = None
+    if results and len(results) > 0:
+        filename = results[0].get("filename")
+
     # Try multiple possible paths for the video directory
     possible_dirs = [
         Path("/Users/roopakeerthiraj/Documents/MealPrep/video-context-graph/data/videos"),
@@ -237,6 +250,18 @@ async def stream_video(video_id: str):
         Path(__file__).parent.parent.parent / "data" / "videos",
     ]
 
+    # If we have a filename from the database, try that first
+    if filename:
+        for video_dir in possible_dirs:
+            video_path = video_dir / filename
+            if video_path.exists():
+                return StreamingResponse(
+                    open(video_path, "rb"),
+                    media_type="video/mp4",
+                    headers={"Content-Disposition": f"inline; filename={filename}"},
+                )
+
+    # Fallback: try video_id with extensions
     for video_dir in possible_dirs:
         for ext in [".mp4", ".webm", ".mov", ".avi"]:
             video_path = video_dir / f"{video_id}{ext}"
