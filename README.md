@@ -125,8 +125,9 @@ cd backend && uv run python scripts/ingest.py \
 1. **Index** the video with TwelveLabs (Marengo + Pegasus) — `tasks.create` +
    `wait_for_done` (skipped for method 3).
 2. **Analyze** with **Pegasus** → a rich, time-coded description.
-3. **Structure** that prose with **OpenAI** (JSON mode) → segments, each with a
-   summary, on-screen text, transcript, canonicalized entities, and topics.
+3. **Structure** that prose with **OpenAI Structured Outputs** → schema-validated
+   segments, each with a summary, on-screen text, transcript, canonicalized
+   entities, and topics.
 4. **Embed** each segment with **Marengo** (512-dim) for the Neo4j vector index.
 5. **Write** to Neo4j: `Video`/`Segment` created, `Entity`/`Topic` **MERGE**'d
    across videos, a temporal `NEXT` chain, and the vector index ensured.
@@ -177,8 +178,10 @@ against a Neo4j instance you share with other data.
 | `NEO4J_URI` | `neo4j://localhost:7687` | Bolt URI (Aura: `neo4j+s://…`) |
 | `NEO4J_USERNAME` / `NEO4J_PASSWORD` | `neo4j` / — | Neo4j auth |
 | `NEO4J_DATABASE` | `neo4j` | Target database |
-| `OPENAI_API_KEY` | — | Agent brain + entity structuring |
-| `OPENAI_MODEL` | `gpt-4o` | Agent + structuring model |
+| `OPENAI_API_KEY` | — | Agent reasoning + structured video extraction |
+| `OPENAI_MODEL` | `gpt-5.6` | Strands agent reasoning and graph tools |
+| `OPENAI_EXTRACTION_MODEL` | `gpt-5.6-terra` | Schema-validated video and entity extraction |
+| `OPENAI_REASONING_EFFORT` | `low` | Keeps agent and extraction responses fast; also accepts `none` |
 | `TWELVE_LABS_API_KEY` | — | Read by the TwelveLabs SDK |
 | `TL_INDEX_ID` | *(empty)* | Reuse a specific index; else created/found by name |
 | `TL_INDEX_NAME` | `video-context-graph` | Index name when creating |
@@ -197,7 +200,8 @@ against a Neo4j instance you share with other data.
 | Index + search | `marengo3.0` | multimodal (visual + audio + transcription) |
 | Analyze | `pegasus1.2` | the Pegasus version an index accepts at creation |
 | Segment embeddings | `marengo3.0` | 512-dim text embeddings → Neo4j vector index |
-| Agent brain | `gpt-4o` | via Strands `OpenAIModel` |
+| Agent brain | `gpt-5.6` | via Strands `OpenAIResponsesModel`, with low reasoning |
+| Video extraction | `gpt-5.6-terra` | OpenAI Structured Outputs with a typed segment schema |
 
 > Note: TwelveLabs accepts `pegasus1.2` when **creating** an index but
 > `pegasus1.5` is analyze-only. The embedding dimension (512 for `marengo3.0`)
@@ -217,7 +221,9 @@ against a Neo4j instance you share with other data.
 | `make reset` | ⚠️ Delete all nodes in Neo4j |
 | `make test-connection` | Verify Neo4j connectivity |
 | `make docker-up` / `docker-down` | Local Neo4j via Docker |
-| `make test` / `make lint` | Tests / linters |
+| `make test` | Backend unit tests, frontend type-check, and end-to-end test discovery |
+| `make test-e2e` | Run end-to-end tests against the running, seeded application |
+| `make lint` | Linters |
 
 ## API endpoints
 

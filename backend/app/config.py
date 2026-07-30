@@ -5,6 +5,8 @@ an OpenAI-brained Strands agent, and TwelveLabs (Marengo + Pegasus) for video
 understanding. Short-term chat context is kept in-process (see app.memory).
 """
 
+from typing import Literal
+
 from pydantic_settings import BaseSettings
 
 
@@ -17,9 +19,11 @@ class Settings(BaseSettings):
     neo4j_password: str = ""
     neo4j_database: str = "neo4j"
 
-    # --- OpenAI (the agent's reasoning brain + entity canonicalization) ----
+    # --- OpenAI (agent reasoning + structured video extraction) ------------
     openai_api_key: str = ""
-    openai_model: str = "gpt-4o"
+    openai_model: str = "gpt-5.6"
+    openai_extraction_model: str = "gpt-5.6-terra"
+    openai_reasoning_effort: Literal["none", "low", "medium", "high", "xhigh", "max"] = "low"
 
     # --- TwelveLabs (video understanding) ----------------------------------
     # The SDK auto-reads TWELVE_LABS_API_KEY from the environment; this mirror

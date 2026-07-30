@@ -3,8 +3,8 @@
 Pipeline (uses all four sponsor tools):
   1. TwelveLabs Marengo+Pegasus index the video (client.tasks.create).
   2. Pegasus analyzes it into a rich, time-coded description.
-  3. OpenAI structures that description into segments + canonicalized
-     entities/topics (JSON mode).
+  3. OpenAI Structured Outputs turns that description into validated segments
+     and canonicalized entities/topics.
   4. Marengo embeds each segment summary -> Neo4j vector index.
   5. Neo4j stores Video/Segment/Entity/Topic, MERGE'ing entities & topics by
      normalized key so the same thing across videos collapses to one node.
@@ -17,10 +17,12 @@ back to SAMPLE_VIDEO_URLS from .env if that directory is empty.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import sys
 from pathlib import Path
+from typing import Literal
+
+from pydantic import BaseModel
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("ingest")
@@ -53,6 +55,28 @@ STRUCTURE_SYSTEM = (
 )
 
 
+class VideoEntity(BaseModel):
+    name: str
+    type: Literal[
+        "person", "organization", "location", "object", "product", "brand", "event", "concept"
+    ]
+
+
+class VideoSegment(BaseModel):
+    start_sec: float
+    end_sec: float
+    summary: str
+    on_screen_text: str
+    transcript: str
+    entities: list[VideoEntity]
+    topics: list[str]
+
+
+class VideoAnalysis(BaseModel):
+    video_summary: str
+    segments: list[VideoSegment]
+
+
 def _norm_key(name: str) -> str:
     return " ".join(name.strip().lower().split())
 
@@ -64,20 +88,22 @@ def _vendored_samples() -> list[str]:
 
 
 def structure_with_openai(pegasus_text: str) -> dict:
-    """Turn Pegasus prose into a strict segments JSON via OpenAI."""
+    """Turn Pegasus prose into schema-validated video and segment data."""
     from openai import OpenAI
 
     client = OpenAI(api_key=settings.openai_api_key or None)
-    resp = client.chat.completions.create(
-        model=settings.openai_model,
-        response_format={"type": "json_object"},
-        temperature=0.1,
-        messages=[
+    response = client.responses.parse(
+        model=settings.openai_extraction_model,
+        reasoning={"effort": settings.openai_reasoning_effort},
+        input=[
             {"role": "system", "content": STRUCTURE_SYSTEM},
             {"role": "user", "content": f"Video analysis:\n\n{pegasus_text}"},
         ],
+        text_format=VideoAnalysis,
     )
-    return json.loads(resp.choices[0].message.content)
+    if response.output_parsed is None:
+        raise RuntimeError("OpenAI did not return a structured video analysis.")
+    return response.output_parsed.model_dump()
 
 
 async def apply_schema() -> None:
