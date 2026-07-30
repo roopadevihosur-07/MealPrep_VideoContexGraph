@@ -102,10 +102,15 @@ export function VideoBrowser() {
         </HStack>
         <Box px={3} py={2}>
           <Heading size="sm" mb={2}>{selected.title}</Heading>
-          {selected.url && (
-            // eslint-disable-next-line jsx-a11y/media-has-caption
-            <video ref={videoRef} src={selected.url} controls style={{ width: "100%", borderRadius: 6 }} />
-          )}
+          {
+            // Use backend streaming endpoint if URL is not a full HTTP URL
+            <video
+              ref={videoRef}
+              src={selected.url && selected.url.startsWith("http") ? selected.url : `${API_BASE.replace("/api", "")}/video/${encodeURIComponent(selected.id)}/stream`}
+              controls
+              style={{ width: "100%", borderRadius: 6 }}
+            />
+          }
           {selected.summary && (
             <Text fontSize="xs" color="gray.600" mt={2}>{selected.summary}</Text>
           )}

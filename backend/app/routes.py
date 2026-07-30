@@ -224,23 +224,43 @@ async def search(request: SearchRequest):
         raise HTTPException(status_code=502, detail=f"TwelveLabs search failed: {e}")
 
 
+@router.get("/video/{video_id}/stream")
+async def stream_video(video_id: str):
+    """Stream a video file if available locally."""
+    from pathlib import Path
+    import os
+
+    video_dir = Path(__file__).parent.parent.parent / "data" / "videos"
+
+    for ext in [".mp4", ".webm", ".mov", ".avi"]:
+        video_path = video_dir / f"{video_id}{ext}"
+        if video_path.exists():
+            return StreamingResponse(
+                open(video_path, "rb"),
+                media_type="video/mp4",
+                headers={"Content-Disposition": f"inline; filename={video_id}{ext}"},
+            )
+
+    raise HTTPException(status_code=404, detail="Video file not found")
+
+
 @router.get("/scenarios")
 async def scenarios():
     """Demo prompts for the frontend."""
     return {
         "domain": "Video Context Graph",
         "scenarios": [
-            {"name": "Explore", "prompts": [
-                "What videos do we have and what are they about?",
-                "Show me the graph around the rabbit",
+            {"name": "Meal Prep Overview", "prompts": [
+                "What's in this meal prep video and what are the main recipes?",
+                "What are the key ingredients used in the meal prep?",
             ]},
-            {"name": "Find a moment", "prompts": [
-                "Find the moment where a butterfly lands on the rabbit",
-                "Where does the rabbit eat an apple?",
+            {"name": "Find Techniques", "prompts": [
+                "Find the moment where vegetables are chopped or prepared",
+                "Show me the steps for seasoning the ingredients",
             ]},
-            {"name": "Cross-video", "prompts": [
-                "Which entities appear in more than one video?",
-                "What connects the two clips to each other?",
+            {"name": "Healthy Meal Prep", "prompts": [
+                "What are the health benefits mentioned for these meals?",
+                "What are the meal preparation tips for staying healthy?",
             ]},
         ],
     }
