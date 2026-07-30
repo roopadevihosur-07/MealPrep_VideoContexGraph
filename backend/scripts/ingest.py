@@ -49,9 +49,11 @@ STRUCTURE_SYSTEM = (
     '"summary": str, "on_screen_text": str, "transcript": str, '
     '"entities": [{"name": str, "type": one of '
     '["person","organization","location","object","product","brand","event","concept"]}], '
-    '"topics": [str]}]}\n'
+    '"topics": [str], "nutritional_claim": str, "step_dependencies": [{"type": "before"|"can_parallel", "description": str}]}]}\n'
     "Canonicalize entity and topic names (Title Case, singular, no duplicates within a segment). "
-    "Use the SAME canonical name for the same real-world thing so it can be merged across videos."
+    "Use the SAME canonical name for the same real-world thing so it can be merged across videos. "
+    "For nutritional_claim: extract any explicit or implied health/nutrition statement (e.g., 'high in protein', 'gluten-free'). "
+    "For step_dependencies: identify if this segment's action MUST happen before another (BEFORE) or can happen in parallel (CAN_PARALLEL) to others."
 )
 
 
@@ -62,6 +64,11 @@ class VideoEntity(BaseModel):
     ]
 
 
+class StepDependency(BaseModel):
+    type: Literal["before", "can_parallel"]
+    description: str
+
+
 class VideoSegment(BaseModel):
     start_sec: float
     end_sec: float
@@ -70,6 +77,8 @@ class VideoSegment(BaseModel):
     transcript: str
     entities: list[VideoEntity]
     topics: list[str]
+    nutritional_claim: str = ""
+    step_dependencies: list[StepDependency] = []
 
 
 class VideoAnalysis(BaseModel):
@@ -153,11 +162,13 @@ async def write_video(video: dict, segments: list[dict]) -> None:
             "on_screen_text": s.get("on_screen_text", ""),
             "transcript": s.get("transcript", ""),
             "embedding": s.get("embedding"),
+            "nutritional_claim": s.get("nutritional_claim", ""),
             "entities": [{"key": _norm_key(e["name"]), "name": e["name"].strip(),
                           "type": e.get("type", "concept")}
                          for e in s.get("entities", []) if e.get("name")],
             "topics": [{"key": _norm_key(t), "name": t.strip()}
                        for t in s.get("topics", []) if t],
+            "dependencies": s.get("step_dependencies", []),
         })
 
     await execute_cypher(
@@ -168,7 +179,8 @@ async def write_video(video: dict, segments: list[dict]) -> None:
           SET s.video_id = row.video_id, s.start_sec = row.start_sec,
               s.end_sec = row.end_sec, s.summary = row.summary,
               s.on_screen_text = row.on_screen_text, s.transcript = row.transcript,
-              s.embedding = row.embedding, s.domain = $domain, s.idx = row.idx
+              s.embedding = row.embedding, s.domain = $domain, s.idx = row.idx,
+              s.nutritional_claim = row.nutritional_claim
           MERGE (v)-[:HAS_SEGMENT]->(s)
           FOREACH (ent IN row.entities |
             MERGE (e:Entity {key: ent.key})
@@ -178,12 +190,16 @@ async def write_video(video: dict, segments: list[dict]) -> None:
             MERGE (t:Topic {key: top.key})
             SET t.name = top.name, t.domain = $domain
             MERGE (s)-[:ABOUT]->(t))
+          FOREACH (dep IN row.dependencies |
+            CREATE (c:Claim {id: row.id + '#claim:' + dep.description})
+            SET c.text = dep.description, c.domain = $domain
+            CREATE (s)-[:MAKES]->(c))
         """,
         {"vid": video["id"], "rows": seg_rows, "domain": domain},
         collect=False,
     )
 
-    # temporal NEXT chain
+    # temporal NEXT chain + step dependencies
     await execute_cypher(
         """
         MATCH (v:Video {id: $vid})-[:HAS_SEGMENT]->(s:Segment)
@@ -192,6 +208,9 @@ async def write_video(video: dict, segments: list[dict]) -> None:
         UNWIND range(0, size(segs)-2) AS i
           WITH segs[i] AS a, segs[i+1] AS b
           MERGE (a)-[:NEXT]->(b)
+          WITH a, b
+          WHERE a.nutritional_claim <> '' AND b.nutritional_claim <> ''
+          MERGE (a)-[:BEFORE]->(b)
         """,
         {"vid": video["id"]},
         collect=False,

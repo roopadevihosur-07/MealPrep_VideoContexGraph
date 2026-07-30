@@ -145,6 +145,40 @@ def get_graph_schema() -> str:
     return json.dumps(result, default=str)
 
 
+@tool
+def find_contradictions() -> str:
+    """Find nutritional claim contradictions across videos — same ingredient/dish claimed differently by different creators."""
+    cypher = """
+    MATCH (e:Entity)<-[:MENTIONS]-(s1:Segment)-[:MAKES]->(c1:Claim)
+    MATCH (e)<-[:MENTIONS]-(s2:Segment)-[:MAKES]->(c2:Claim)
+    MATCH (s1)<-[:HAS_SEGMENT]-(v1:Video)
+    MATCH (s2)<-[:HAS_SEGMENT]-(v2:Video)
+    WHERE v1 <> v2 AND c1.text <> c2.text AND s1.nutritional_claim <> '' AND s2.nutritional_claim <> ''
+    RETURN DISTINCT
+        e.name AS subject,
+        v1.title AS video_1, c1.text AS claim_1,
+        v2.title AS video_2, c2.text AS claim_2
+    LIMIT 20
+    """
+    result = _run_sync(execute_cypher(cypher, {}, tool_name="find_contradictions"))
+    return json.dumps({"contradictions": result}, default=str)
+
+
+@tool
+def shared_staple_scheduler() -> str:
+    """Find ingredients appearing in the most dishes (batch-cook bases) — shared staples across the meal prep videos."""
+    cypher = """
+    MATCH (i:Entity)<-[:MENTIONS]-(s:Segment)<-[:HAS_SEGMENT]-(v:Video)
+    WITH i, count(DISTINCT v) AS dishes_using
+    WHERE dishes_using >= 2
+    RETURN i.name AS staple, dishes_using, collect(v.title) AS appears_in
+    ORDER BY dishes_using DESC
+    LIMIT 15
+    """
+    result = _run_sync(execute_cypher(cypher, {}, tool_name="shared_staple_scheduler"))
+    return json.dumps({"staples": result}, default=str)
+
+
 model = OpenAIResponsesModel(
     client_args={"api_key": os.environ.get("OPENAI_API_KEY", settings.openai_api_key)},
     model_id=settings.openai_model,
@@ -163,6 +197,8 @@ agent = Agent(
         twelvelabs_search,
         run_cypher,
         get_graph_schema,
+        find_contradictions,
+        shared_staple_scheduler,
     ],
 )
 

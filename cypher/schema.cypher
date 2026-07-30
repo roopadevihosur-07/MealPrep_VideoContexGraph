@@ -26,6 +26,11 @@ CREATE INDEX entity_domain IF NOT EXISTS FOR (n:Entity) ON (n.domain);
 CREATE FULLTEXT INDEX segment_fulltext IF NOT EXISTS
 FOR (n:Segment) ON EACH [n.summary, n.on_screen_text, n.transcript];
 
+// --- Claim nodes (nutritional facts extracted per segment) ------------------
+CREATE CONSTRAINT claim_id_unique IF NOT EXISTS FOR (n:Claim) REQUIRE n.id IS UNIQUE;
+CREATE INDEX claim_text IF NOT EXISTS FOR (n:Claim) ON (n.text);
+CREATE INDEX claim_domain IF NOT EXISTS FOR (n:Claim) ON (n.domain);
+
 // --- Vector index for semantic segment search ------------------------------
 // Created programmatically by scripts/ingest.py once the true Marengo embedding
 // dimension is known (it varies by Marengo version). Template shown for reference:

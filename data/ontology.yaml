@@ -89,6 +89,20 @@ entity_types:
         type: string
         required: true
 
+  - label: Claim
+    pole_type: OBJECT
+    subtype: NUTRITIONAL_CLAIM
+    color: "#ec4899"
+    icon: badge
+    properties:
+      - name: id
+        type: string
+        required: true
+        unique: true
+      - name: text
+        type: string
+        required: true
+
 relationships:
   - type: HAS_SEGMENT
     source: Video
@@ -102,6 +116,15 @@ relationships:
   - type: ABOUT          # a segment is about a topic
     source: Segment
     target: Topic
+  - type: MAKES          # a segment makes a nutritional claim
+    source: Segment
+    target: Claim
+  - type: BEFORE         # segment A must happen before segment B
+    source: Segment
+    target: Segment
+  - type: CAN_PARALLEL   # segment A can happen in parallel with segment B
+    source: Segment
+    target: Segment
 
 demo_scenarios:
   - name: Explore
