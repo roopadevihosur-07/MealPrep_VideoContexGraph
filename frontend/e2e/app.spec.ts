@@ -6,7 +6,7 @@ const API_URL = process.env.API_URL || "http://localhost:8000";
 // Timeout for LLM responses — these can be slow
 const CHAT_TIMEOUT = 120_000;
 
-test.describe("Agent Memory Context Graph", () => {
+test.describe("Video Context Graph", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(BASE_URL);
   });
@@ -17,7 +17,7 @@ test.describe("Agent Memory Context Graph", () => {
 
   test("page loads with header and chat panel", async ({ page }) => {
     // Header with domain name
-    await expect(page.getByRole("heading", { name: /Agent Memory/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Video Context Graph/i })).toBeVisible();
 
     // Chat heading
     await expect(page.getByRole("heading", { name: /chat/i })).toBeVisible();
@@ -31,7 +31,7 @@ test.describe("Agent Memory Context Graph", () => {
     await expect(page.getByText(/try these/i)).toBeVisible();
 
     // Should have clickable badges
-    const badges = page.locator("[role='group'] span[data-scope='badge'], .chakra-badge").filter({ hasText: /.{10,}/ });
+    const badges = page.locator("button[title]").filter({ hasText: /.{10,}/ });
     const count = await badges.count();
     expect(count).toBeGreaterThan(0);
   });
@@ -45,7 +45,7 @@ test.describe("Agent Memory Context Graph", () => {
     expect(res.ok()).toBeTruthy();
     const body = await res.json();
     expect(["ok", "degraded"]).toContain(body.status);
-    expect(body.domain).toBe("agent-memory");
+    expect(body.domain).toBe("video-context-graph");
   });
 
   test("connection status indicator visible", async ({ page }) => {
@@ -71,16 +71,16 @@ test.describe("Agent Memory Context Graph", () => {
   // Chat interaction with demo prompts
   // --------------------------------------------------------------------------
 
-  test("demo prompt: Agent Introspection — sends and gets response", async ({ page }) => {
+  test("demo prompt: Explore — sends and gets response", async ({ page }) => {
     test.setTimeout(CHAT_TIMEOUT);
 
     // Type the prompt
     const input = page.getByPlaceholder(/ask about/i);
-    await input.fill("What does agent Alpha remember about the user\u0027s project preferences?");
+    await input.fill("What videos do we have and what are they about?");
     await page.getByRole("button", { name: /send/i }).click();
 
     // Should show user message
-    await expect(page.getByText("What does agent Alpha remember about the user\u0027s project preferences?").first()).toBeVisible();
+    await expect(page.getByText("What videos do we have and what are they about?").first()).toBeVisible();
 
     // Should show loading state (thinking or tool calls)
     await expect(
@@ -100,16 +100,16 @@ test.describe("Agent Memory Context Graph", () => {
     expect(text!.toLowerCase()).not.toContain("cannot reach the backend");
   });
 
-  test("demo prompt: Conversation Analysis — sends and gets response", async ({ page }) => {
+  test("demo prompt: Find a moment — sends and gets response", async ({ page }) => {
     test.setTimeout(CHAT_TIMEOUT);
 
     // Type the prompt
     const input = page.getByPlaceholder(/ask about/i);
-    await input.fill("Summarize the key topics discussed across all conversations today");
+    await input.fill("Find the moment where a butterfly lands on the rabbit");
     await page.getByRole("button", { name: /send/i }).click();
 
     // Should show user message
-    await expect(page.getByText("Summarize the key topics discussed across all conversations today").first()).toBeVisible();
+    await expect(page.getByText("Find the moment where a butterfly lands on the rabbit").first()).toBeVisible();
 
     // Should show loading state (thinking or tool calls)
     await expect(
@@ -129,16 +129,16 @@ test.describe("Agent Memory Context Graph", () => {
     expect(text!.toLowerCase()).not.toContain("cannot reach the backend");
   });
 
-  test("demo prompt: Memory Management — sends and gets response", async ({ page }) => {
+  test("demo prompt: Cross-video — sends and gets response", async ({ page }) => {
     test.setTimeout(CHAT_TIMEOUT);
 
     // Type the prompt
     const input = page.getByPlaceholder(/ask about/i);
-    await input.fill("What are the most important memories stored by agent Alpha?");
+    await input.fill("Which entities appear in more than one video?");
     await page.getByRole("button", { name: /send/i }).click();
 
     // Should show user message
-    await expect(page.getByText("What are the most important memories stored by agent Alpha?").first()).toBeVisible();
+    await expect(page.getByText("Which entities appear in more than one video?").first()).toBeVisible();
 
     // Should show loading state (thinking or tool calls)
     await expect(
@@ -166,7 +166,7 @@ test.describe("Agent Memory Context Graph", () => {
     test.setTimeout(CHAT_TIMEOUT);
 
     // Find and click the first demo badge
-    const badge = page.locator(".chakra-badge[title]").first();
+    const badge = page.locator("button[title]").first();
     const promptText = await badge.getAttribute("title");
     expect(promptText).toBeTruthy();
 
@@ -189,11 +189,13 @@ test.describe("Agent Memory Context Graph", () => {
 
     // Send a prompt that should trigger tool calls
     const input = page.getByPlaceholder(/ask about/i);
-    await input.fill("What does agent Alpha remember about the user\u0027s project preferences?");
+    await input.fill("Show me the graph around the rabbit");
     await page.getByRole("button", { name: /send/i }).click();
 
     // Wait for at least one tool call badge to appear
-    const toolBadge = page.locator("[data-scope='badge']").filter({ hasText: /execute_cypher|get_schema|search_agent/ });
+    const toolBadge = page.locator(".chakra-badge, [data-scope='badge']").filter({
+      hasText: /search_video_moments|explore_graph|run_cypher|get_graph_schema|twelvelabs_search/,
+    });
     await expect(toolBadge.first()).toBeVisible({ timeout: 30_000 });
   });
 
@@ -209,7 +211,7 @@ test.describe("Agent Memory Context Graph", () => {
 
     // Send a query that should return graph data
     const input = page.getByPlaceholder(/ask about/i);
-    await input.fill("What does agent Alpha remember about the user\u0027s project preferences?");
+    await input.fill("Show me the graph around the rabbit");
     await page.getByRole("button", { name: /send/i }).click();
 
     // Wait for the graph to switch from schema to data view
@@ -264,63 +266,35 @@ test.describe("Agent Memory Context Graph", () => {
     const detailsTab = page.getByRole("button", { name: /details panel/i });
     await detailsTab.click();
 
-    // Traces/Documents tabs should be visible
-    await expect(page.getByText(/traces/i).first()).toBeVisible();
+    // The video browser should be visible in the details panel.
+    await expect(page.getByRole("heading", { name: /videos/i })).toBeVisible();
   });
 
   // --------------------------------------------------------------------------
-  // Decision trace panel (right side, "Traces" tab)
+  // Video browser (right-side details panel)
   // --------------------------------------------------------------------------
 
-  test("decision traces panel loads and shows demo traces", async ({ page }) => {
-    // The /traces endpoint should return at least one trace from the demo
-    // fixture. The panel may be behind a tab on smaller viewports.
-    const tracesTab = page.getByRole("tab", { name: /traces/i }).first();
-    if (await tracesTab.count() > 0) {
-      await tracesTab.click().catch(() => { /* may already be active */ });
-    }
-
-    // Wait for the panel header — it identifies the panel even when empty.
-    await expect(page.getByText(/decision traces/i).first()).toBeVisible({ timeout: 10_000 });
-
-    // Either the empty-state message appears, or at least one trace card.
-    const emptyState = page.getByText(/no decision traces yet/i);
-    const traceCards = page.locator("[role='button']").filter({ hasText: /step/i });
-    const emptyVisible = await emptyState.isVisible().catch(() => false);
-    if (!emptyVisible) {
-      const count = await traceCards.count();
-      expect(count).toBeGreaterThan(0);
-
-      // Click the first trace card and verify the step detail panel opens.
-      await traceCards.first().click();
-      // Detail panel should render thought/action labels.
-      await expect(page.getByText(/outcome/i).first()).toBeVisible({ timeout: 5_000 });
-    }
+  test("video browser loads and shows the indexed video list", async ({ page }) => {
+    const details = page.getByRole("complementary", { name: /details/i });
+    await expect(details.getByRole("heading", { name: /videos/i })).toBeVisible();
+    await expect(details.getByText(/^videos \(\d+\)$/i)).toBeVisible({ timeout: 10_000 });
   });
 
   // --------------------------------------------------------------------------
-  // Document browser (right side, "Documents" tab)
+  // Video segment browser (right-side details panel)
   // --------------------------------------------------------------------------
 
-  test("document browser loads and renders a document detail view", async ({ page }) => {
-    const docsTab = page.getByRole("tab", { name: /documents/i }).first();
-    if (await docsTab.count() > 0) {
-      await docsTab.click();
+  test("video browser opens an indexed video's segment detail view", async ({ page }) => {
+    const details = page.getByRole("complementary", { name: /details/i });
+    await expect(details.getByText(/^videos \(\d+\)$/i)).toBeVisible({ timeout: 10_000 });
+
+    const videoTitle = details.getByRole("heading").nth(1);
+    if (await videoTitle.count() === 0) {
+      test.skip(true, "no indexed videos — run make seed before end-to-end tests");
     }
 
-    await expect(page.getByText(/^documents$/i).first()).toBeVisible({ timeout: 10_000 });
-
-    // Either empty state or a populated list — demo data should populate it.
-    const emptyState = page.getByText(/no documents/i);
-    const emptyVisible = await emptyState.isVisible().catch(() => false);
-    if (!emptyVisible) {
-      // Click the first document card.
-      const firstDoc = page.locator("[role='button']").filter({ hasText: /\w+/ }).first();
-      await firstDoc.click({ trial: false });
-      // ReactMarkdown rendering produces semantic markdown — at least one
-      // paragraph or heading should be visible.
-      await expect(page.locator("p, h1, h2, h3").first()).toBeVisible({ timeout: 5_000 });
-    }
+    await videoTitle.click();
+    await expect(details.getByText(/segments/i)).toBeVisible({ timeout: 10_000 });
   });
 
   // --------------------------------------------------------------------------
@@ -328,9 +302,8 @@ test.describe("Agent Memory Context Graph", () => {
   // --------------------------------------------------------------------------
 
   test("composite keys do not trigger React duplicate-key warnings across renders", async ({ page }) => {
-    // Send a few prompts in sequence. React logs a console.error if entity,
-    // preference, or tool-call badges collide on a non-unique key — pre-v0.13.0
-    // they used `key={i}` (the array index), which would fire here.
+    // Send a few video prompts in sequence. React logs a console.error if
+    // entity or tool-call badges collide on a non-unique key.
     const keyWarnings: string[] = [];
     page.on("console", (msg) => {
       if (msg.type() === "warning" || msg.type() === "error") {
@@ -349,9 +322,9 @@ test.describe("Agent Memory Context Graph", () => {
     if (await input.count() === 0) test.skip(true, "no chat input found");
 
     for (const prompt of [
-      "Tell me about the data",
-      "What entities exist here?",
-      "Show me a summary of recent activity",
+      "What videos do we have and what are they about?",
+      "Show me the graph around the rabbit",
+      "Which entities appear in more than one video?",
     ]) {
       await input.fill(prompt);
       await page.keyboard.press("Enter");
@@ -361,40 +334,30 @@ test.describe("Agent Memory Context Graph", () => {
     expect(keyWarnings).toEqual([]);
   });
 
-  test("decision trace panel step list renders without runtime errors", async ({ page }) => {
+  test("video browser list renders without runtime errors", async ({ page }) => {
     const pageErrors: string[] = [];
     page.on("pageerror", (err) => pageErrors.push(err.message));
 
-    const tracesTab = page.getByRole("tab", { name: /traces/i }).first();
-    if (await tracesTab.count() > 0) {
-      await tracesTab.click().catch(() => { /* may already be active */ });
-    }
-
-    const traceCards = page.locator("[role='button']").filter({ hasText: /step/i });
-    if (await traceCards.count() === 0) {
-      test.skip(true, "no demo traces — fixture may be empty");
-    }
-
-    await traceCards.first().click();
-    await page.waitForTimeout(500);
-    // No uncaught exceptions from rendering the step list.
+    const details = page.getByRole("complementary", { name: /details/i });
+    await expect(details.getByRole("heading", { name: /videos/i })).toBeVisible();
+    await expect(details.getByText(/^videos \(\d+\)$/i)).toBeVisible({ timeout: 10_000 });
     expect(pageErrors).toEqual([]);
   });
 
-  test("document browser entity badges render without runtime errors", async ({ page }) => {
+  test("video segment entity badges render without runtime errors", async ({ page }) => {
     const pageErrors: string[] = [];
     page.on("pageerror", (err) => pageErrors.push(err.message));
 
-    const docsTab = page.getByRole("tab", { name: /documents/i }).first();
-    if (await docsTab.count() > 0) await docsTab.click();
+    const details = page.getByRole("complementary", { name: /details/i });
+    await expect(details.getByText(/^videos \(\d+\)$/i)).toBeVisible({ timeout: 10_000 });
 
-    const firstDoc = page.locator("[role='button']").filter({ hasText: /\w+/ }).first();
-    if (await firstDoc.count() === 0) {
-      test.skip(true, "no demo documents — fixture may be empty");
+    const videoTitle = details.getByRole("heading").nth(1);
+    if (await videoTitle.count() === 0) {
+      test.skip(true, "no indexed videos — run make seed before end-to-end tests");
     }
 
-    await firstDoc.click({ trial: false });
-    await page.waitForTimeout(500);
+    await videoTitle.click();
+    await expect(details.getByText(/segments/i)).toBeVisible({ timeout: 10_000 });
     expect(pageErrors).toEqual([]);
   });
 
@@ -402,11 +365,11 @@ test.describe("Agent Memory Context Graph", () => {
   // API-level prompt quality checks
   // --------------------------------------------------------------------------
 
-  test("API: Agent Introspection prompt 1 returns quality response", async ({ request }) => {
+  test("API: Explore prompt 1 returns quality response", async ({ request }) => {
     test.setTimeout(CHAT_TIMEOUT);
 
     const res = await request.post(`${API_URL}/api/chat`, {
-      data: { message: "What does agent Alpha remember about the user\u0027s project preferences?" },
+      data: { message: "What videos do we have and what are they about?" },
     });
     expect(res.ok()).toBeTruthy();
 
@@ -425,11 +388,11 @@ test.describe("Agent Memory Context Graph", () => {
     expect(body.response.toLowerCase()).not.toContain("i don't have access");
   });
 
-  test("API: Agent Introspection prompt 2 returns quality response", async ({ request }) => {
+  test("API: Explore prompt 2 returns quality response", async ({ request }) => {
     test.setTimeout(CHAT_TIMEOUT);
 
     const res = await request.post(`${API_URL}/api/chat`, {
-      data: { message: "Show me all entities that agent Alpha has extracted this week" },
+      data: { message: "Show me the graph around the rabbit" },
     });
     expect(res.ok()).toBeTruthy();
 
@@ -448,11 +411,11 @@ test.describe("Agent Memory Context Graph", () => {
     expect(body.response.toLowerCase()).not.toContain("i don't have access");
   });
 
-  test("API: Agent Introspection prompt 3 returns quality response", async ({ request }) => {
+  test("API: Explore prompt 3 returns quality response", async ({ request }) => {
     test.setTimeout(CHAT_TIMEOUT);
 
     const res = await request.post(`${API_URL}/api/chat`, {
-      data: { message: "Which tools does agent Alpha use most frequently?" },
+      data: { message: "What entities and topics appear in the indexed videos?" },
     });
     expect(res.ok()).toBeTruthy();
 
@@ -471,11 +434,11 @@ test.describe("Agent Memory Context Graph", () => {
     expect(body.response.toLowerCase()).not.toContain("i don't have access");
   });
 
-  test("API: Conversation Analysis prompt 1 returns quality response", async ({ request }) => {
+  test("API: Find a moment prompt 1 returns quality response", async ({ request }) => {
     test.setTimeout(CHAT_TIMEOUT);
 
     const res = await request.post(`${API_URL}/api/chat`, {
-      data: { message: "Summarize the key topics discussed across all conversations today" },
+      data: { message: "Find the moment where a butterfly lands on the rabbit" },
     });
     expect(res.ok()).toBeTruthy();
 
@@ -494,11 +457,11 @@ test.describe("Agent Memory Context Graph", () => {
     expect(body.response.toLowerCase()).not.toContain("i don't have access");
   });
 
-  test("API: Conversation Analysis prompt 2 returns quality response", async ({ request }) => {
+  test("API: Find a moment prompt 2 returns quality response", async ({ request }) => {
     test.setTimeout(CHAT_TIMEOUT);
 
     const res = await request.post(`${API_URL}/api/chat`, {
-      data: { message: "Which conversations were escalated and why?" },
+      data: { message: "Where does the rabbit eat an apple?" },
     });
     expect(res.ok()).toBeTruthy();
 
@@ -517,11 +480,11 @@ test.describe("Agent Memory Context Graph", () => {
     expect(body.response.toLowerCase()).not.toContain("i don't have access");
   });
 
-  test("API: Conversation Analysis prompt 3 returns quality response", async ({ request }) => {
+  test("API: Find a moment prompt 3 returns quality response", async ({ request }) => {
     test.setTimeout(CHAT_TIMEOUT);
 
     const res = await request.post(`${API_URL}/api/chat`, {
-      data: { message: "Find conversations where the agent failed to resolve the user\u0027s request" },
+      data: { message: "Find video moments that show the rabbit eating" },
     });
     expect(res.ok()).toBeTruthy();
 
@@ -540,11 +503,11 @@ test.describe("Agent Memory Context Graph", () => {
     expect(body.response.toLowerCase()).not.toContain("i don't have access");
   });
 
-  test("API: Memory Management prompt 1 returns quality response", async ({ request }) => {
+  test("API: Cross-video prompt 1 returns quality response", async ({ request }) => {
     test.setTimeout(CHAT_TIMEOUT);
 
     const res = await request.post(`${API_URL}/api/chat`, {
-      data: { message: "What are the most important memories stored by agent Alpha?" },
+      data: { message: "Which entities appear in more than one video?" },
     });
     expect(res.ok()).toBeTruthy();
 
@@ -563,11 +526,11 @@ test.describe("Agent Memory Context Graph", () => {
     expect(body.response.toLowerCase()).not.toContain("i don't have access");
   });
 
-  test("API: Memory Management prompt 2 returns quality response", async ({ request }) => {
+  test("API: Cross-video prompt 2 returns quality response", async ({ request }) => {
     test.setTimeout(CHAT_TIMEOUT);
 
     const res = await request.post(`${API_URL}/api/chat`, {
-      data: { message: "Show me the entity graph extracted from recent conversations" },
+      data: { message: "What connects the two clips to each other?" },
     });
     expect(res.ok()).toBeTruthy();
 
@@ -586,11 +549,11 @@ test.describe("Agent Memory Context Graph", () => {
     expect(body.response.toLowerCase()).not.toContain("i don't have access");
   });
 
-  test("API: Memory Management prompt 3 returns quality response", async ({ request }) => {
+  test("API: Cross-video prompt 3 returns quality response", async ({ request }) => {
     test.setTimeout(CHAT_TIMEOUT);
 
     const res = await request.post(`${API_URL}/api/chat`, {
-      data: { message: "Which memories haven\u0027t been accessed in over 30 days?" },
+      data: { message: "Show me entities shared by both clips" },
     });
     expect(res.ok()).toBeTruthy();
 

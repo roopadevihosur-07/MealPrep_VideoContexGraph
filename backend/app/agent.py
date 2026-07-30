@@ -7,7 +7,7 @@ import json
 import os
 
 from strands import Agent
-from strands.models.openai import OpenAIModel
+from strands.models.openai_responses import OpenAIResponsesModel
 from strands.tools import tool
 
 from app.config import settings
@@ -145,10 +145,13 @@ def get_graph_schema() -> str:
     return json.dumps(result, default=str)
 
 
-model = OpenAIModel(
+model = OpenAIResponsesModel(
     client_args={"api_key": os.environ.get("OPENAI_API_KEY", settings.openai_api_key)},
     model_id=settings.openai_model,
-    params={"temperature": 0.2, "max_tokens": 2000},
+    params={
+        "reasoning": {"effort": settings.openai_reasoning_effort},
+        "max_output_tokens": 2000,
+    },
 )
 
 agent = Agent(
