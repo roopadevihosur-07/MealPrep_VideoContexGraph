@@ -11,6 +11,16 @@ import remarkGfm from "remark-gfm";
 import { API_BASE, DEMO_SCENARIOS, DOMAIN } from "@/lib/config";
 import type { GraphData } from "@/lib/config";
 
+// Sweetgreen Design Tokens
+const sweetgreenColors = {
+  cream: "#f4f3e7",
+  deepForest: "#00473c",
+  limeGlow: "#e6ff55",
+  sageMist: "#d8e5d6",
+  warmSand: "#e8dcc6",
+  forestShadow: "#0e150e",
+};
+
 interface ToolCall {
   name: string;
   inputs: Record<string, unknown>;
@@ -449,11 +459,11 @@ export function ChatInterface({ onGraphUpdate, externalInput, onExternalInputCon
   const allPrompts = DEMO_SCENARIOS.flatMap((s) => s.prompts);
 
   return (
-    <Flex direction="column" h="100%">
-      <HStack px={4} py={3} borderBottom="1px solid" borderColor="gray.200" justifyContent="space-between">
-        <Heading size="sm">Chat</Heading>
+    <Flex direction="column" h="100%" bg={sweetgreenColors.cream}>
+      <HStack px={6} py={4} borderBottom={`1px solid ${sweetgreenColors.sageMist}`} justifyContent="space-between" bg={sweetgreenColors.cream}>
+        <Heading size="sm" color={sweetgreenColors.deepForest} fontFamily="system-ui">Chat</Heading>
         {messages.length > 0 && (
-          <Button size="xs" variant="ghost" onClick={startNewConversation}>
+          <Button size="xs" variant="ghost" color={sweetgreenColors.deepForest} onClick={startNewConversation}>
             <RotateCcw size={14} />
             New
           </Button>
@@ -462,12 +472,12 @@ export function ChatInterface({ onGraphUpdate, externalInput, onExternalInputCon
 
       {/* Demo scenario suggested questions */}
       {messages.length === 0 && !loading && (
-        <Flex direction="column" flex={1} justify="center" px={4} py={6}>
+        <Flex direction="column" flex={1} justify="center" px={4} py={6} bg={sweetgreenColors.cream}>
           <VStack gap={4}>
-            <Text fontSize="lg" fontWeight="medium" color="gray.700">
+            <Text fontSize="lg" fontWeight="medium" color={sweetgreenColors.deepForest}>
 🎬 Ask about your videos
             </Text>
-            <HStack gap={1} flexShrink={0} color="gray.500" fontSize="xs" fontWeight="medium">
+            <HStack gap={1} flexShrink={0} color={sweetgreenColors.deepForest} opacity={0.7} fontSize="xs" fontWeight="medium">
               <Sparkles size={14} />
               <Text>Try these</Text>
             </HStack>
@@ -477,6 +487,9 @@ export function ChatInterface({ onGraphUpdate, externalInput, onExternalInputCon
                   key={prompt}
                   size="xs"
                   variant="outline"
+                  borderColor={sweetgreenColors.deepForest}
+                  color={sweetgreenColors.deepForest}
+                  _hover={{ bg: sweetgreenColors.sageMist }}
                   rounded="full"
                   px={3}
                   fontWeight="normal"
@@ -664,13 +677,14 @@ export function ChatInterface({ onGraphUpdate, externalInput, onExternalInputCon
         <div ref={messagesEndRef} />
       </VStack>
 
-      {/* Input area — Chakra UI Pro inspired bordered container */}
-      <Box px={4} py={3} borderTop="1px solid" borderColor="gray.200">
+      {/* Input area — Sweetgreen inspired bordered container */}
+      <Box px={4} py={3} borderTop={`1px solid ${sweetgreenColors.sageMist}`} bg={sweetgreenColors.cream}>
         <Box
           borderWidth="1px"
-          borderColor="gray.200"
-          rounded="lg"
-          _focusWithin={{ borderColor: "blue.400", boxShadow: "0 0 0 1px var(--chakra-colors-blue-400)" }}
+          borderColor={sweetgreenColors.sageMist}
+          rounded="12px"
+          bg="white"
+          _focusWithin={{ borderColor: sweetgreenColors.limeGlow, boxShadow: `0 0 0 2px rgba(230, 255, 85, 0.2)` }}
           transition="border-color 0.2s, box-shadow 0.2s"
         >
           <Textarea
@@ -685,9 +699,11 @@ export function ChatInterface({ onGraphUpdate, externalInput, onExternalInputCon
             fontSize="sm"
             px={3}
             py={2}
+            color={sweetgreenColors.deepForest}
+            _placeholder={{ color: sweetgreenColors.deepForest, opacity: 0.5 }}
           />
-          <HStack px={2} py={1.5} justify="space-between">
-            <Text fontSize="xs" color="gray.400" display={{ base: "none", sm: "block" }}>
+          <HStack px={3} py={2} justify="space-between">
+            <Text fontSize="xs" color={sweetgreenColors.deepForest} opacity={0.6} display={{ base: "none", sm: "block" }}>
               Enter to send, Shift+Enter for new line
             </Text>
             <IconButton
@@ -695,7 +711,9 @@ export function ChatInterface({ onGraphUpdate, externalInput, onExternalInputCon
               onClick={() => sendMessage()}
               disabled={!input.trim() || loading}
               size="xs"
-              colorPalette="blue"
+              bg={sweetgreenColors.limeGlow}
+              color={sweetgreenColors.deepForest}
+              _hover={{ bg: sweetgreenColors.limeGlow, opacity: 0.9 }}
               rounded="md"
             >
               <Send size={14} />

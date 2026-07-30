@@ -47,12 +47,22 @@ STRUCTURE_SYSTEM = (
     "You convert a video analysis into strict JSON. Output ONLY a JSON object of the form:\n"
     '{"video_summary": str, "segments": [{"start_sec": number, "end_sec": number, '
     '"summary": str, "on_screen_text": str, "transcript": str, '
+    '"segment_type": one of ["ingredient_prep","cooking","seasoning","plating","storage","nutrition_info","equipment","yield"], '
     '"entities": [{"name": str, "type": one of '
-    '["person","organization","location","object","product","brand","event","concept"]}], '
-    '"topics": [str], "nutritional_claim": str, "step_dependencies": [{"type": "before"|"can_parallel", "description": str}]}]}\n'
+    '["person","organization","location","object","product","brand","event","concept","ingredient","equipment","technique"]}], '
+    '"topics": [str], "ingredients": [{"name": str, "quantity": str, "unit": str}], '
+    '"techniques": [str], "cooking_temp": str, "cooking_time_min": number, "cooking_time_sec": number, '
+    '"nutritional_info": {"calories": number, "protein_g": number, "carbs_g": number, "fat_g": number, "fiber_g": number}, '
+    '"allergens": [str], "yield_servings": number, "storage_method": str, "storage_duration": str, '
+    '"nutritional_claim": str, "step_dependencies": [{"type": "before"|"can_parallel", "description": str}]}]}\n'
     "Canonicalize entity and topic names (Title Case, singular, no duplicates within a segment). "
-    "Use the SAME canonical name for the same real-world thing so it can be merged across videos. "
-    "For nutritional_claim: extract any explicit or implied health/nutrition statement (e.g., 'high in protein', 'gluten-free'). "
+    "Use the SAME canonical name for the same real-world thing so it can be merged across videos.\n"
+    "For segment_type: categorize what this segment is about (ingredient prep, cooking method, seasoning, plating, storage, nutrition info, equipment, or yield info).\n"
+    "For ingredients: list all ingredients visible/mentioned with quantities if stated.\n"
+    "For techniques: identify cooking techniques like chopping, roasting, sautéing, etc.\n"
+    "For nutritional_info: extract any stated calorie/macro information; use 0 or null if not mentioned.\n"
+    "For allergens: identify potential allergens mentioned.\n"
+    "For storage_method: e.g., 'refrigerator', 'freezer', 'room temperature'.\n"
     "For step_dependencies: identify if this segment's action MUST happen before another (BEFORE) or can happen in parallel (CAN_PARALLEL) to others."
 )
 
@@ -60,7 +70,7 @@ STRUCTURE_SYSTEM = (
 class VideoEntity(BaseModel):
     name: str
     type: Literal[
-        "person", "organization", "location", "object", "product", "brand", "event", "concept"
+        "person", "organization", "location", "object", "product", "brand", "event", "concept", "ingredient", "equipment", "technique"
     ]
 
 
@@ -69,14 +79,39 @@ class StepDependency(BaseModel):
     description: str
 
 
+class Ingredient(BaseModel):
+    name: str
+    quantity: str = ""
+    unit: str = ""
+
+
+class NutritionalInfo(BaseModel):
+    calories: float = 0
+    protein_g: float = 0
+    carbs_g: float = 0
+    fat_g: float = 0
+    fiber_g: float = 0
+
+
 class VideoSegment(BaseModel):
     start_sec: float
     end_sec: float
     summary: str
     on_screen_text: str
     transcript: str
+    segment_type: Literal["ingredient_prep", "cooking", "seasoning", "plating", "storage", "nutrition_info", "equipment", "yield"] = "cooking"
     entities: list[VideoEntity]
     topics: list[str]
+    ingredients: list[Ingredient] = []
+    techniques: list[str] = []
+    cooking_temp: str = ""
+    cooking_time_min: int = 0
+    cooking_time_sec: int = 0
+    nutritional_info: NutritionalInfo = NutritionalInfo()
+    allergens: list[str] = []
+    yield_servings: float = 0
+    storage_method: str = ""
+    storage_duration: str = ""
     nutritional_claim: str = ""
     step_dependencies: list[StepDependency] = []
 
@@ -153,6 +188,13 @@ async def write_video(video: dict, segments: list[dict]) -> None:
 
     seg_rows = []
     for i, s in enumerate(segments):
+        # Extract nutritional info with defaults
+        nutr = s.get("nutritional_info", {})
+        if isinstance(nutr, dict):
+            nutr_info = nutr
+        else:
+            nutr_info = {}
+
         seg_rows.append({
             "id": f"{video['id']}#{i}",
             "idx": i,
@@ -163,7 +205,23 @@ async def write_video(video: dict, segments: list[dict]) -> None:
             "on_screen_text": s.get("on_screen_text", ""),
             "transcript": s.get("transcript", ""),
             "embedding": s.get("embedding"),
+            "segment_type": s.get("segment_type", "cooking"),
             "nutritional_claim": s.get("nutritional_claim", ""),
+            "ingredients": s.get("ingredients", []),
+            "ingredient_names": [ing.get("name", "") for ing in s.get("ingredients", []) if ing.get("name")],
+            "techniques": s.get("techniques", []),
+            "cooking_temp": s.get("cooking_temp", ""),
+            "cooking_time_min": s.get("cooking_time_min", 0),
+            "cooking_time_sec": s.get("cooking_time_sec", 0),
+            "calories": nutr_info.get("calories", 0),
+            "protein_g": nutr_info.get("protein_g", 0),
+            "carbs_g": nutr_info.get("carbs_g", 0),
+            "fat_g": nutr_info.get("fat_g", 0),
+            "fiber_g": nutr_info.get("fiber_g", 0),
+            "allergens": s.get("allergens", []),
+            "yield_servings": s.get("yield_servings", 0),
+            "storage_method": s.get("storage_method", ""),
+            "storage_duration": s.get("storage_duration", ""),
             "entities": [{"key": _norm_key(e["name"]), "name": e["name"].strip(),
                           "type": e.get("type", "concept")}
                          for e in s.get("entities", []) if e.get("name")],
@@ -181,7 +239,22 @@ async def write_video(video: dict, segments: list[dict]) -> None:
               s.end_sec = row.end_sec, s.summary = row.summary,
               s.on_screen_text = row.on_screen_text, s.transcript = row.transcript,
               s.embedding = row.embedding, s.domain = $domain, s.idx = row.idx,
-              s.nutritional_claim = row.nutritional_claim
+              s.segment_type = row.segment_type,
+              s.nutritional_claim = row.nutritional_claim,
+              s.ingredients = row.ingredient_names,
+              s.techniques = row.techniques,
+              s.cooking_temp = row.cooking_temp,
+              s.cooking_time_min = row.cooking_time_min,
+              s.cooking_time_sec = row.cooking_time_sec,
+              s.calories = row.calories,
+              s.protein_g = row.protein_g,
+              s.carbs_g = row.carbs_g,
+              s.fat_g = row.fat_g,
+              s.fiber_g = row.fiber_g,
+              s.allergens = row.allergens,
+              s.yield_servings = row.yield_servings,
+              s.storage_method = row.storage_method,
+              s.storage_duration = row.storage_duration
           MERGE (v)-[:HAS_SEGMENT]->(s)
           FOREACH (ent IN row.entities |
             MERGE (e:Entity {key: ent.key})
@@ -191,6 +264,14 @@ async def write_video(video: dict, segments: list[dict]) -> None:
             MERGE (t:Topic {key: top.key})
             SET t.name = top.name, t.domain = $domain
             MERGE (s)-[:ABOUT]->(t))
+          FOREACH (ing IN row.ingredients |
+            MERGE (i:Ingredient {key: toLower(ing.name)})
+            SET i.name = ing.name, i.domain = $domain
+            MERGE (s)-[:USES]->(i))
+          FOREACH (tech IN row.techniques |
+            MERGE (t:Technique {key: toLower(tech)})
+            SET t.name = tech, t.domain = $domain
+            MERGE (s)-[:APPLIES]->(t))
           FOREACH (dep IN row.dependencies |
             CREATE (c:Claim {id: row.id + '#claim:' + dep.description})
             SET c.text = dep.description, c.domain = $domain

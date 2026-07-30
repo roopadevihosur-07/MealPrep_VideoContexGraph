@@ -194,15 +194,34 @@ async def list_videos():
 
 @router.get("/videos/{video_id}/segments")
 async def video_segments(video_id: str):
-    """Return a video's segments in temporal order."""
+    """Return a video's segments in temporal order with meal prep context."""
     _require_neo4j()
     results = await execute_cypher(
         """
         MATCH (v:Video {id: $vid})-[:HAS_SEGMENT]->(s:Segment)
         OPTIONAL MATCH (s)-[:MENTIONS]->(e:Entity)
+        OPTIONAL MATCH (s)-[:USES]->(i:Ingredient)
+        OPTIONAL MATCH (s)-[:APPLIES]->(t:Technique)
         RETURN s.id AS id, s.start_sec AS start_sec, s.end_sec AS end_sec,
                s.summary AS summary, s.on_screen_text AS on_screen_text,
-               collect(DISTINCT e.name) AS entities
+               s.segment_type AS segment_type,
+               s.ingredients AS ingredients,
+               collect(DISTINCT e.name) AS entities,
+               collect(DISTINCT i.name) AS ingredient_entities,
+               collect(DISTINCT t.name) AS techniques,
+               s.cooking_temp AS cooking_temp,
+               s.cooking_time_min AS cooking_time_min,
+               s.cooking_time_sec AS cooking_time_sec,
+               s.calories AS calories,
+               s.protein_g AS protein_g,
+               s.carbs_g AS carbs_g,
+               s.fat_g AS fat_g,
+               s.fiber_g AS fiber_g,
+               s.allergens AS allergens,
+               s.yield_servings AS yield_servings,
+               s.storage_method AS storage_method,
+               s.storage_duration AS storage_duration,
+               s.nutritional_claim AS nutritional_claim
         ORDER BY s.start_sec
         """,
         {"vid": video_id},
@@ -273,6 +292,131 @@ async def stream_video(video_id: str):
                 )
 
     raise HTTPException(status_code=404, detail=f"Video file not found: {video_id}")
+
+
+@router.get("/meal-prep/{video_id}/details")
+async def meal_prep_details(video_id: str):
+    """Get aggregated meal prep details with nutritional breakdown."""
+    _require_neo4j()
+
+    # Get video info
+    video_res = await execute_cypher(
+        "MATCH (v:Video {id: $vid}) RETURN v.title AS title, v.summary AS summary",
+        {"vid": video_id},
+        collect=True,
+    )
+
+    if not video_res:
+        raise HTTPException(status_code=404, detail="Video not found")
+
+    video = video_res[0]
+
+    # Get all segments with nutritional info
+    segments_res = await execute_cypher(
+        """
+        MATCH (v:Video {id: $vid})-[:HAS_SEGMENT]->(s:Segment)
+        WITH s
+        OPTIONAL MATCH (s)-[:USES]->(i:Ingredient)
+        OPTIONAL MATCH (s)-[:APPLIES]->(t:Technique)
+        RETURN
+          s.id AS segment_id,
+          s.summary AS summary,
+          s.segment_type AS segment_type,
+          s.ingredients AS ingredients,
+          s.techniques AS techniques,
+          s.calories AS calories,
+          s.protein_g AS protein_g,
+          s.carbs_g AS carbs_g,
+          s.fat_g AS fat_g,
+          s.fiber_g AS fiber_g,
+          s.allergens AS allergens,
+          s.nutritional_claim AS nutritional_claim,
+          s.cooking_temp AS cooking_temp,
+          s.cooking_time_min AS cooking_time_min,
+          s.cooking_time_sec AS cooking_time_sec,
+          s.yield_servings AS yield_servings,
+          s.start_sec AS start_sec,
+          collect(DISTINCT i.name) AS ingredient_nodes,
+          collect(DISTINCT t.name) AS technique_nodes
+        ORDER BY start_sec
+        """,
+        {"vid": video_id},
+        collect=False,
+    )
+
+    # Aggregate nutritional info
+    total_calories = 0
+    total_protein = 0
+    total_carbs = 0
+    total_fat = 0
+    total_fiber = 0
+    all_ingredients = set()
+    all_techniques = set()
+    all_allergens = set()
+    all_claims = []
+    total_servings = 0
+
+    for seg in segments_res:
+        if seg.get("calories"):
+            total_calories += seg["calories"]
+        if seg.get("protein_g"):
+            total_protein += seg["protein_g"]
+        if seg.get("carbs_g"):
+            total_carbs += seg["carbs_g"]
+        if seg.get("fat_g"):
+            total_fat += seg["fat_g"]
+        if seg.get("fiber_g"):
+            total_fiber += seg["fiber_g"]
+
+        if seg.get("ingredient_nodes"):
+            all_ingredients.update(seg["ingredient_nodes"])
+        if seg.get("technique_nodes"):
+            all_techniques.update(seg["technique_nodes"])
+        if seg.get("allergens"):
+            all_allergens.update(seg["allergens"])
+        if seg.get("nutritional_claim"):
+            all_claims.append(seg["nutritional_claim"])
+        if seg.get("yield_servings"):
+            total_servings = seg["yield_servings"]
+
+    # Calculate per gram/serving
+    per_gram_protein = total_protein / total_calories * 4 if total_calories > 0 else 0
+    per_gram_carbs = total_carbs / total_calories * 4 if total_calories > 0 else 0
+    per_gram_fat = total_fat / total_calories * 9 if total_calories > 0 else 0
+
+    per_serving_calories = total_calories / total_servings if total_servings > 0 else 0
+    per_serving_protein = total_protein / total_servings if total_servings > 0 else 0
+    per_serving_carbs = total_carbs / total_servings if total_servings > 0 else 0
+    per_serving_fat = total_fat / total_servings if total_servings > 0 else 0
+
+    return {
+        "video": video,
+        "total_segments": len(segments_res),
+        "segments": segments_res,
+        "nutrition_summary": {
+            "total_calories": round(total_calories, 1),
+            "total_protein_g": round(total_protein, 1),
+            "total_carbs_g": round(total_carbs, 1),
+            "total_fat_g": round(total_fat, 1),
+            "total_fiber_g": round(total_fiber, 1),
+        },
+        "per_serving": {
+            "calories": round(per_serving_calories, 1),
+            "protein_g": round(per_serving_protein, 1),
+            "carbs_g": round(per_serving_carbs, 1),
+            "fat_g": round(per_serving_fat, 1),
+        },
+        "macro_percentages": {
+            "protein_percent": round((total_protein * 4 / total_calories * 100), 1) if total_calories > 0 else 0,
+            "carbs_percent": round((total_carbs * 4 / total_calories * 100), 1) if total_calories > 0 else 0,
+            "fat_percent": round((total_fat * 9 / total_calories * 100), 1) if total_calories > 0 else 0,
+        },
+        "ingredients": sorted(list(all_ingredients)),
+        "techniques": sorted(list(all_techniques)),
+        "allergens": sorted(list(all_allergens)),
+        "health_claims": list(set(all_claims)),
+        "total_servings": total_servings,
+    }
 
 
 @router.get("/scenarios")

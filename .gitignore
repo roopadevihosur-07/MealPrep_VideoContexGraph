@@ -28,3 +28,4 @@ Thumbs.db
 # Data
 data/documents/*.json
 data/documents/*.txt
+data/videos/*.mp4

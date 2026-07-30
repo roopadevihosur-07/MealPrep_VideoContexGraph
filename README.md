@@ -21,11 +21,27 @@ video-context-graph/
 │   ├── app/vector_client.py       Neo4j vector search over segment embeddings
 │   ├── app/routes.py              FastAPI endpoints
 │   └── scripts/ingest.py          video -> Pegasus -> OpenAI -> Neo4j pipeline
-├── frontend/         Next.js + Chakra UI + NVL (chat | graph | video inspector)
+├── frontend/         Next.js + Chakra UI + NVL (chat | graph | video inspector | meal-prep dashboard)
 ├── cypher/schema.cypher           constraints + vector index
 ├── data/ontology.yaml             Video/Segment/Entity/Topic ontology
 └── .env                           credentials (not committed)
 ```
+
+### Meal prep dashboard
+
+On top of the generic video-context-graph pipeline, this app adds a meal-prep
+domain layer: video extraction is enriched with ingredients, cooking
+techniques, nutrition, allergens, and yield/serving info, aggregated per video
+in `GET /api/meal-prep/{video_id}/details` and rendered as a dedicated
+dashboard (`frontend/components/MealPrepDashboard.tsx`). See
+[SEGMENT_GUIDE.md](SEGMENT_GUIDE.md) for the full segment schema and how it's
+captured.
+
+> Numeric nutrition fields (calories, protein/carbs/fat, servings) are only
+> populated when the video actually states them — the extraction prompt
+> reports what's shown/said rather than estimating, so a video with no
+> on-screen nutrition facts will show `0` there while ingredients/techniques/
+> allergens still populate normally.
 
 ### Graph model
 
@@ -71,18 +87,20 @@ watch the graph light up.
 All ingestion goes through `backend/scripts/ingest.py`. `make seed` is a thin
 wrapper around it. There are **three ways** to add a video, and you can mix them.
 
-### The vendored sample (zero config)
+### Zero config: `make seed` with no arguments
 
-The repo ships a ready-to-use clip at `data/videos/bbb_1080p_30fps_normal_85sec.mp4`
-(an 85-second excerpt of _Big Buck Bunny_ — see [Sample video & attribution](#sample-video--attribution)).
-Running `make seed` with **no arguments** ingests every `.mp4` in `data/videos/`,
-so a fresh clone builds a populated graph out of the box:
+Running `make seed` with **no arguments** ingests every `.mp4` in
+`data/videos/` (not committed — see below), falling back to
+`SAMPLE_VIDEO_URLS` in `.env` (a small Big Buck Bunny clip) if that directory
+is empty:
 
 ```bash
 make seed
 ```
 
-Drop your own `.mp4` files into `data/videos/` and they'll be picked up the same way.
+Drop your own `.mp4` files into `data/videos/` and they'll be picked up the
+same way. Video files aren't tracked in git — bring your own media rather than
+relying on a bundled sample (see [Sample video & attribution](#sample-video--attribution)).
 
 ### 1. Public MP4 URL (simplest)
 
@@ -233,7 +251,8 @@ against a Neo4j instance you share with other data.
 | `POST /api/chat` | One-shot agent turn |
 | `POST /api/chat/stream` | Streaming agent turn (SSE) |
 | `GET /api/videos` | List ingested videos + segment counts |
-| `GET /api/videos/{id}/segments` | A video's segments in order |
+| `GET /api/videos/{id}/segments` | A video's segments in order, with meal-prep context (ingredients, techniques, nutrition, allergens) |
+| `GET /api/meal-prep/{id}/details` | Aggregated meal-prep breakdown for a video: total/per-serving nutrition, ingredients, techniques, allergens, health claims |
 | `POST /api/search` | Live multimodal search via TwelveLabs |
 | `GET /api/schema` · `GET /api/schema/visualization` | Graph schema |
 | `POST /api/expand` | Neighbors of a node (graph drill-down) |
@@ -259,28 +278,25 @@ against a Neo4j instance you share with other data.
 | Health shows `degraded`, `neo4j:false` | Neo4j unreachable — check `NEO4J_URI/USERNAME/PASSWORD`; `make test-connection`. |
 | Nodes tagged with the wrong `domain` | `DOMAIN_ID` in `.env` differs from when you ingested. Keep it consistent; re-seed or re-tag. |
 | Vector search returns nothing | Vector index not built (no embeddings were produced). Re-run `make seed`. |
+| Meal-prep dashboard shows all `0`s | Either the video predates the meal-prep extraction schema (re-run `uv run python scripts/ingest.py --video-id=<TL_VIDEO_ID>` to re-extract with the current schema — safe/idempotent, see above), or the video simply never states explicit calories/macros/servings. |
 
 ---
 
 ## Sample video & attribution
 
-The repo vendors a sample clip at `data/videos/bbb_1080p_30fps_normal_85sec.mp4`
-— an **85-second excerpt of _Big Buck Bunny_** (2008), trimmed and re-encoded
-from a copy downloaded from blender.org.
+`data/videos/` is **not** tracked in git (video files are large binaries and
+often carry redistribution restrictions), so a fresh clone starts with an
+empty directory. Zero-config `make seed` still works via the
+`SAMPLE_VIDEO_URLS` fallback in `.env` — a small Creative Commons
+(CC-BY 3.0) _Big Buck Bunny_ clip fetched from a public test-video host at
+seed time, rather than a bundled file.
 
-- **© copyright 2008, Blender Foundation / [www.bigbuckbunny.org](https://peach.blender.org/)**
-- **License: [Creative Commons Attribution 3.0 (CC-BY 3.0)](https://creativecommons.org/licenses/by/3.0/)**
-
-_Big Buck Bunny_ is a Creative Commons–licensed **open movie**: it may be reused,
-redistributed, and adapted — including commercially — provided the Blender
-Foundation is properly attributed. It is included here **solely as a sample input
-for research, testing, and demonstration** of this project's pipeline; no
-endorsement by the Blender Foundation is implied. See
-[`data/videos/ATTRIBUTION.md`](data/videos/ATTRIBUTION.md).
-
-**Bring your own media responsibly.** Any video you add is your responsibility —
-ensure you hold the rights or a license that permits your use. This project makes
-no representation about third-party clips you choose to ingest.
+**Bring your own media responsibly.** Any video you add to `data/videos/` (e.g.
+`meal_prep_youtube.mp4` used for local testing/demoing) is your responsibility —
+ensure you hold the rights or a license that permits your use, and don't commit
+it to a public repo without confirming you're allowed to redistribute it. This
+project makes no representation about third-party clips you choose to ingest.
+See [`data/videos/ATTRIBUTION.md`](data/videos/ATTRIBUTION.md).
 
 ---
 
