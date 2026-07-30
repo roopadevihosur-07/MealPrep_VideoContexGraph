@@ -127,23 +127,23 @@ relationships:
     target: Segment
 
 demo_scenarios:
-  - name: Explore
+  - name: Meal Prep Overview
     prompts:
-      - "What videos do we have and what are they about?"
-      - "Show me the graph around the rabbit"
-      - "Which entities show up most across the videos?"
+      - "What's in this meal prep video and what are the main recipes?"
+      - "What are the key ingredients used in the meal prep?"
+      - "What nutritional claims are made about the dishes?"
 
-  - name: Find a moment
+  - name: Find Techniques
     prompts:
-      - "Find the moment where a butterfly lands on the rabbit"
-      - "Where does the rabbit eat an apple?"
-      - "Show me the segment where the rabbit wakes up"
+      - "Find the moment where vegetables are chopped or prepared"
+      - "Show me the steps for seasoning the ingredients"
+      - "What cooking methods are demonstrated in this video?"
 
-  - name: Cross-video
+  - name: Healthy Meal Prep
     prompts:
-      - "Which entities appear in more than one video?"
-      - "What connects the two clips to each other?"
-      - "List the topics that span multiple videos"
+      - "What are the health benefits mentioned for these meals?"
+      - "Which ingredients are highlighted as nutritious?"
+      - "What are the meal preparation tips for staying healthy?"
 
 system_prompt: |
   You are a video intelligence assistant. You answer questions over a Neo4j
