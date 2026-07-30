@@ -46,24 +46,24 @@ export interface DemoScenario {
 
 export const DEMO_SCENARIOS: DemoScenario[] = [
   {
-    name: "Explore",
+    name: "Meal Prep Overview",
     prompts: [
-      "What videos do we have and what are they about?",
-      "Show me the graph around the rabbit",
+      "What's in this meal prep video and what are the main recipes?",
+      "What are the key ingredients used in the meal prep?",
     ],
   },
   {
-    name: "Find a moment",
+    name: "Find Techniques",
     prompts: [
-      "Find the moment where a butterfly lands on the rabbit",
-      "Where does the rabbit eat an apple?",
+      "Find the moment where vegetables are chopped or prepared",
+      "Show me the steps for seasoning the ingredients",
     ],
   },
   {
-    name: "Cross-video",
+    name: "Healthy Meal Prep",
     prompts: [
-      "Which entities appear in more than one video?",
-      "What connects the two clips to each other?",
+      "What are the health benefits mentioned for these meals?",
+      "What are the meal preparation tips for staying healthy?",
     ],
   },
 ];
