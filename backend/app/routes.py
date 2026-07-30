@@ -230,18 +230,24 @@ async def stream_video(video_id: str):
     from pathlib import Path
     import os
 
-    video_dir = Path(__file__).parent.parent.parent / "data" / "videos"
+    # Try multiple possible paths for the video directory
+    possible_dirs = [
+        Path("/Users/roopakeerthiraj/Documents/MealPrep/video-context-graph/data/videos"),
+        Path.cwd().parent / "data" / "videos",
+        Path(__file__).parent.parent.parent / "data" / "videos",
+    ]
 
-    for ext in [".mp4", ".webm", ".mov", ".avi"]:
-        video_path = video_dir / f"{video_id}{ext}"
-        if video_path.exists():
-            return StreamingResponse(
-                open(video_path, "rb"),
-                media_type="video/mp4",
-                headers={"Content-Disposition": f"inline; filename={video_id}{ext}"},
-            )
+    for video_dir in possible_dirs:
+        for ext in [".mp4", ".webm", ".mov", ".avi"]:
+            video_path = video_dir / f"{video_id}{ext}"
+            if video_path.exists():
+                return StreamingResponse(
+                    open(video_path, "rb"),
+                    media_type="video/mp4",
+                    headers={"Content-Disposition": f"inline; filename={video_id}{ext}"},
+                )
 
-    raise HTTPException(status_code=404, detail="Video file not found")
+    raise HTTPException(status_code=404, detail=f"Video file not found: {video_id}")
 
 
 @router.get("/scenarios")
