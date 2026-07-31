@@ -1,4 +1,4 @@
-# Meal Prep - Video Agent Context Graph
+# Meal Prep : Video Agent Context Graph
 
 Transform cooking videos into interactive knowledge graphs. Understand
 recipes, nutritional claims, and meal prep strategies through AI-powered
