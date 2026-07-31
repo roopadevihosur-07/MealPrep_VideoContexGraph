@@ -1,15 +1,44 @@
 # Meal Prep - Video Agent Context Graph
 
-**Video is evidence.** Point it at raw video and this app builds a live Neo4j
-knowledge graph of what is *shown, said, and written* — then lets an
-OpenAI-brained agent answer questions over it, with a live graph visualization.
+Transform cooking videos into interactive knowledge graphs. Understand
+recipes, nutritional claims, and meal prep strategies through AI-powered
+video analysis — **video is evidence**: point it at a raw cooking video and
+this app builds a live Neo4j knowledge graph of what is *shown, said, and
+written*, then lets an OpenAI-brained agent answer questions over it, with a
+live graph visualization and a structured meal-prep dashboard on the side.
 
 > Uses all four: **TwelveLabs** (Marengo + Pegasus video understanding) ·
 > **OpenAI** (agent brain + entity canonicalization) · **AWS Strands** (agent +
 > tool orchestration) · **Neo4j** (context graph + vector index + NVL viz).
 
-The thesis: the same entity seen across many independent videos MERGEs to **one**
-node — so the graph grows richer instead of duplicating.
+### The problem
+
+Hours of valuable meal-prep content exist in videos, but there's no way to
+extract, organize, and query nutritional information, cooking techniques, and
+ingredient relationships across multiple videos.
+
+| ❌ Before | ✅ After |
+|---|---|
+| Manual note-taking from videos | Automatic video understanding |
+| No way to search across videos | Semantic search across all content |
+| Conflicting nutritional claims hidden | Contradiction detection |
+| Ingredient relationships unknown | Cross-video ingredient analysis |
+| Time-consuming meal planning | Intelligent meal prep suggestions |
+
+The thesis: the same entity — an ingredient, a technique, a topic — seen
+across many independent videos MERGEs to **one** node, so the graph grows
+richer instead of duplicating.
+
+### Use cases
+
+- **Health-conscious meal planning** — automatically identify high-protein,
+  low-carb recipes and cross-reference nutritional claims across creators
+- **Nutritional analysis** — detect contradicting health claims about the
+  same ingredient and make data-driven food choices
+- **Batch-cooking optimization** — find ingredients used across multiple
+  recipes to identify batch-cooking bases for efficient weekly meal prep
+- **Creator content management** — organize a meal-prep channel's content
+  and make it searchable for viewers
 
 ## Architecture
 
