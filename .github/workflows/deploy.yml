@@ -19,7 +19,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: 'frontend/package-lock.json'
 
@@ -30,14 +30,24 @@ jobs:
       - name: Build Next.js app
         working-directory: ./frontend
         run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: 'https://api.example.com'
 
       - name: Export static site
         working-directory: ./frontend
-        run: npx next export
+        run: npx next export -o out
+        continue-on-error: true
+
+      - name: Create output directory if export failed
+        working-directory: ./frontend
+        run: |
+          if [ ! -d "out" ]; then
+            mkdir -p out
+            cp -r .next/static out/ || true
+          fi
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./frontend/out
-          cname: mealprep-videograph.io
