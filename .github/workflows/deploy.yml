@@ -24,11 +24,11 @@ jobs:
           git config --local user.name "GitHub Action"
           # Checkout or create gh-pages branch
           git checkout gh-pages || git checkout --orphan gh-pages
-          # Remove all tracked files except index.html
+          # Remove all tracked files
           git rm -rf --cached .
           git reset --hard
-          # Copy index.html
+          # Copy index.html only
           cp index.html index.html 2>/dev/null || true
           git add index.html
-          git commit --amend --no-edit -m "Deploy landing page to GitHub Pages" || git commit -m "Deploy landing page to GitHub Pages"
-          git push origin gh-pages
+          git commit -m "Deploy landing page to GitHub Pages" || true
+          git push --force origin gh-pages
