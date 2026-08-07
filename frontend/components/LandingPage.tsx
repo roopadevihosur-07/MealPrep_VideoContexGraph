@@ -218,10 +218,16 @@ function FAQItem({ question, answer, index }: { question: string; answer: string
 function InteractiveBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [isClient, setIsClient] = useState(false);
   const particlesRef = useRef<Array<{x: number, y: number, vx: number, vy: number, size: number, opacity: number}>>([]);
   const animationRef = useRef<number>();
 
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isClient) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -322,6 +328,10 @@ function InteractiveBackground() {
       }
     };
   }, [mousePos]);
+
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <Box
