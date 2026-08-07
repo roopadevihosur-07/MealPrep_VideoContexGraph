@@ -22,15 +22,17 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          # Save index.html before wiping the branch
+          # Save files before wiping the branch
           cp index.html /tmp/index.html
+          cp demo-video.mp4 /tmp/demo-video.mp4
           # Create orphan gh-pages branch
           git checkout --orphan gh-pages
           # Remove all files
           git rm -rf .
-          # Restore index.html
+          # Restore files
           cp /tmp/index.html index.html
+          cp /tmp/demo-video.mp4 demo-video.mp4
           # Stage and commit
-          git add index.html
-          git commit -m "Deploy landing page to GitHub Pages"
+          git add index.html demo-video.mp4
+          git commit -m "Deploy landing page with demo video to GitHub Pages"
           git push --force origin gh-pages
