@@ -215,6 +215,11 @@
             box-shadow: 0 20px 50px rgba(0, 71, 60, 0.15);
         }
 
+        .faq-container {
+            max-width: 800px;
+            margin: 40px auto 0;
+        }
+
         .faq-item {
             background: var(--sage-mist);
             margin-bottom: 15px;
@@ -222,6 +227,11 @@
             overflow: hidden;
             cursor: pointer;
             transition: all 0.3s;
+            border-left: 4px solid transparent;
+        }
+
+        .faq-item:hover {
+            box-shadow: 0 4px 12px rgba(0, 71, 60, 0.1);
         }
 
         .faq-question {
@@ -231,35 +241,47 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: all 0.3s;
+            font-size: 16px;
         }
 
-        .faq-question:hover {
-            background: rgba(230, 255, 85, 0.15);
+        .faq-item:hover .faq-question {
+            background: rgba(230, 255, 85, 0.1);
         }
 
         .faq-answer {
-            padding: 0 20px 20px;
+            padding: 0 20px;
             color: var(--deep-forest);
             opacity: 0.85;
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.3s ease;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+            font-size: 15px;
+            line-height: 1.6;
         }
 
         .faq-item.active .faq-answer {
-            max-height: 200px;
-            padding: 20px 20px 20px 20px;
+            max-height: 300px;
+            padding: 0 20px 20px 20px;
+        }
+
+        .faq-item.active {
+            border-left-color: var(--lime-glow);
+            background: rgba(230, 255, 85, 0.08);
         }
 
         .faq-item.active .faq-question {
-            background: rgba(230, 255, 85, 0.15);
-            border-left: 4px solid var(--lime-glow);
+            background: transparent;
         }
 
         .chevron {
             display: inline-block;
-            transition: transform 0.3s;
+            width: 20px;
+            height: 20px;
+            transition: transform 0.3s ease;
             color: var(--deep-forest);
+            font-size: 16px;
+            flex-shrink: 0;
         }
 
         .faq-item.active .chevron {
@@ -989,11 +1011,11 @@
                 <h2>Frequently Asked Questions</h2>
             </div>
 
-            <div style="max-width: 800px; margin: 40px auto; 0;">
+            <div class="faq-container">
                 <div class="faq-item fade-in" onclick="toggleFAQ(this)">
                     <div class="faq-question">
                         <span>What video formats are supported?</span>
-                        <span class="chevron">v</span>
+                        <span class="chevron">▼</span>
                     </div>
                     <div class="faq-answer">We support YouTube videos, Vimeo links, and local file uploads (MP4, MOV, WebM). Videos are processed in real-time.</div>
                 </div>
@@ -1001,7 +1023,7 @@
                 <div class="faq-item fade-in" onclick="toggleFAQ(this)">
                     <div class="faq-question">
                         <span>How long does it take to analyze a video?</span>
-                        <span class="chevron">v</span>
+                        <span class="chevron">▼</span>
                     </div>
                     <div class="faq-answer">A typical 10-minute meal prep video is analyzed in 30-60 seconds. The time depends on video length and complexity.</div>
                 </div>
@@ -1009,7 +1031,7 @@
                 <div class="faq-item fade-in" onclick="toggleFAQ(this)">
                     <div class="faq-question">
                         <span>Can I export the data?</span>
-                        <span class="chevron">v</span>
+                        <span class="chevron">▼</span>
                     </div>
                     <div class="faq-answer">Yes! You can export extracted entities as JSON, query results as CSV, or access everything via our REST API.</div>
                 </div>
@@ -1017,7 +1039,7 @@
                 <div class="faq-item fade-in" onclick="toggleFAQ(this)">
                     <div class="faq-question">
                         <span>Is my data private?</span>
-                        <span class="chevron">v</span>
+                        <span class="chevron">▼</span>
                     </div>
                     <div class="faq-answer">All video data is processed securely. We don't store raw videos, only extracted metadata in our encrypted database.</div>
                 </div>
@@ -1025,7 +1047,7 @@
                 <div class="faq-item fade-in" onclick="toggleFAQ(this)">
                     <div class="faq-question">
                         <span>Can I integrate this with my own app?</span>
-                        <span class="chevron">v</span>
+                        <span class="chevron">▼</span>
                     </div>
                     <div class="faq-answer">Absolutely! We provide a complete REST API with authentication, rate limiting, and webhook support for integration.</div>
                 </div>
@@ -1033,7 +1055,7 @@
                 <div class="faq-item fade-in" onclick="toggleFAQ(this)">
                     <div class="faq-question">
                         <span>What about accuracy of AI extraction?</span>
-                        <span class="chevron">v</span>
+                        <span class="chevron">▼</span>
                     </div>
                     <div class="faq-answer">Our system achieves 95%+ accuracy on entity extraction. All claims and nutritional information are flagged for verification.</div>
                 </div>
@@ -1136,6 +1158,13 @@
 
         // FAQ Toggle
         function toggleFAQ(element) {
+            // Close all other FAQ items
+            document.querySelectorAll('.faq-item').forEach(item => {
+                if (item !== element) {
+                    item.classList.remove('active');
+                }
+            });
+            // Toggle current item
             element.classList.toggle('active');
         }
 
